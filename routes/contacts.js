@@ -76,18 +76,18 @@ router.get('/:id', async (req, res) => {
 // POST: Gửi tin nhắn liên hệ
 router.post('/', async (req, res) => {
     try {
-        const { name, email, phone, message } = req.body;
+        const { first_name, last_name, email, phone, subject, message, subscribe_newsletter } = req.body;
         
-        if (!name || !email || !message) {
+        if (!first_name || !last_name || !email || !message) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields'
+                message: 'Missing required fields: first_name, last_name, email, message'
             });
         }
         
         const [result] = await pool.query(
-            'INSERT INTO contacts (name, email, phone, message) VALUES (?, ?, ?, ?)',
-            [name, email, phone, message]
+            'INSERT INTO contacts (first_name, last_name, email, phone, subject, message, subscribe_newsletter) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [first_name, last_name, email, phone || null, subject || 'general', message, subscribe_newsletter || 0]
         );
         
         res.status(201).json({
@@ -113,17 +113,30 @@ router.put('/:id/status', async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
         
-        const allowedStatuses = ['new', 'read', 'replied'];
-        if (!allowedStatuses.includes(status)) {
+        // Map status to correct fields
+        let updateFields = {};
+        
+        if (status === 'read') {
+            updateFields.is_read = 1;
+        } else if (status === 'replied') {
+            updateFields.is_read = 1;
+            updateFields.is_replied = 1;
+        } else if (status === 'new') {
+            updateFields.is_read = 0;
+            updateFields.is_replied = 0;
+        } else {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid status'
+                message: 'Invalid status. Use: read, replied, or new'
             });
         }
         
+        const setClause = Object.keys(updateFields).map(key => `${key} = ?`).join(', ');
+        const values = [...Object.values(updateFields), id];
+        
         const [result] = await pool.query(
-            'UPDATE contacts SET status = ? WHERE contact_id = ?',
-            [status, id]
+            `UPDATE contacts SET ${setClause} WHERE contact_id = ?`,
+            values
         );
         
         if (result.affectedRows === 0) {

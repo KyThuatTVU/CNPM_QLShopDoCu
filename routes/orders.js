@@ -195,6 +195,15 @@ router.post('/', async (req, res) => {
       );
     }
     
+    // Create payment record for COD
+    if (payment_method === 'cod') {
+      await connection.execute(
+        `INSERT INTO payments (order_id, payment_method, amount, payment_status, payment_date)
+         VALUES (?, ?, ?, 'pending', NOW())`,
+        [order_id, payment_method, final_total]
+      );
+    }
+    
     await connection.commit();
     
     res.status(201).json({
