@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
     
     let query = `
       SELECT o.*, 
-        u.username, u.email,
+        u.full_name, u.email, u.phone,
         GROUP_CONCAT(
           CONCAT(oi.product_name, ' (x', oi.quantity, ')')
           SEPARATOR ', '
@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [orders] = await pool.execute(
-      `SELECT o.*, u.username, u.email 
+      `SELECT o.*, u.full_name, u.email, u.phone 
        FROM orders o
        LEFT JOIN users u ON o.user_id = u.user_id
        WHERE o.order_id = ?`,
